@@ -17,6 +17,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class Ticket {
 
+    /* ticket model */
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
