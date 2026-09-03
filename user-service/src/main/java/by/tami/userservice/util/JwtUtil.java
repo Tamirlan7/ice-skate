@@ -4,7 +4,6 @@ import by.tami.userservice.model.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
@@ -27,19 +26,24 @@ import java.util.function.Function;
 @Component
 public class JwtUtil {
 
-    @Value("${jwt.keys.private}")
-    private String privateKeyStr;
+    @Value("${jwt.keys.private.path}")
+    private String privateKeyPath;
 
-    @Value("${jwt.keys.public}")
-    private String publicKeyStr;
+    @Value("${jwt.keys.public.path}")
+    private String publicKeyPath;
 
     private RSAPrivateKey getPrivateKey() {
         try {
-            byte[] encoded = Base64.getDecoder().decode(privateKeyStr);
+            String keyContent = new String(new ClassPathResource(privateKeyPath).getInputStream().readAllBytes());
+            String privateKeyPEM = keyContent.replace("-----BEGIN PRIVATE KEY-----", "")
+                    .replace("-----END PRIVATE KEY-----", "")
+                    .replaceAll("\\s", "");
+
+            byte[] encoded = Base64.getDecoder().decode(privateKeyPEM);
             KeyFactory keyFactory = KeyFactory.getInstance("RSA");
             PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(encoded);
             return (RSAPrivateKey) keyFactory.generatePrivate(keySpec);
-        } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
+        } catch (IOException | InvalidKeySpecException | NoSuchAlgorithmException e) {
             log.error("something went wrong when perceiving private key", e);
             throw new RuntimeException(e);
         }
@@ -47,11 +51,16 @@ public class JwtUtil {
 
     private RSAPublicKey getPublicKey() {
         try {
-            byte[] encoded = Base64.getDecoder().decode(publicKeyStr);
+            String keyContent = new String(new ClassPathResource(publicKeyPath).getInputStream().readAllBytes());
+            String publicKeyPEM = keyContent.replace("-----BEGIN PUBLIC KEY-----", "")
+                    .replace("-----END PUBLIC KEY-----", "")
+                    .replaceAll("\\s", "");
+
+            byte[] encoded = Base64.getDecoder().decode(publicKeyPEM);
             KeyFactory keyFactory = KeyFactory.getInstance("RSA");
             X509EncodedKeySpec keySpec = new X509EncodedKeySpec(encoded);
             return (RSAPublicKey) keyFactory.generatePublic(keySpec);
-        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+        } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException e) {
             throw new RuntimeException("Error loading public key", e);
         }
     }
